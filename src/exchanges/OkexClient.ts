@@ -52,7 +52,7 @@ export class OkexClient extends BasicClient {
     protected _pingInterval: NodeJS.Timeout;
 
     constructor({
-        wssPath = "wss://real.okex.com:8443/ws/v3",
+        wssPath = "wss://ws.okx.com:8443/ws/v5/public",
         watcherMs,
         sendThrottleMs = 20,
     }: OkexClientOptions = {}) {
@@ -97,7 +97,7 @@ export class OkexClient extends BasicClient {
      */
     protected _marketArg(method: string, market: Market) {
         const type = (market.type || "spot").toLowerCase();
-        return `${type.toLowerCase()}/${method}:${market.id}`;
+        return {channel:`${method}`, instId: `${market.id}`};
     }
 
     /**
@@ -140,7 +140,7 @@ export class OkexClient extends BasicClient {
         this._sendMessage(
             JSON.stringify({
                 op: "subscribe",
-                args: [this._marketArg("ticker", market)],
+                args: [this._marketArg("tickers", market)],
             }),
         );
     }
@@ -231,26 +231,19 @@ export class OkexClient extends BasicClient {
     protected _sendSubLevel3Updates = NotImplementedFn;
     protected _sendUnsubLevel3Updates = NotImplementedFn;
 
-    protected _onMessage(compressed) {
-        zlib.inflateRaw(compressed, (err, raw) => {
-            if (err) {
-                this.emit("error", err);
-                return;
-            }
+    protected _onMessage(raw) {
+        // ignore pongs
+        if (raw == "pong") {
+            return;
+        }
 
-            // ignore pongs
-            if (raw.equals(pongBuffer)) {
-                return;
-            }
-
-            // process JSON message
-            try {
-                const msg = JSON.parse(raw.toString());
-                this._processsMessage(msg);
-            } catch (ex) {
-                this.emit("error", ex);
-            }
-        });
+        // process JSON message
+        try {
+            const msg = JSON.parse(raw);
+            this._processsMessage(msg);
+        } catch (ex) {
+            this.emit("error", ex);
+        }
     }
 
     protected _processsMessage(msg: any) {
@@ -272,31 +265,31 @@ export class OkexClient extends BasicClient {
         }
 
         // tickers
-        if (msg.table.match(/ticker/)) {
+        if (msg.arg.channel.match(/tickers/)) {
             this._processTicker(msg);
             return;
         }
 
         // trades
-        if (msg.table.match(/trade/)) {
+        if (msg.arg.channel.match(/trade/)) {
             this._processTrades(msg);
             return;
         }
 
         // candles
-        if (msg.table.match(/candle/)) {
+        if (msg.arg.channel.match(/candle/)) {
             this._processCandles(msg);
             return;
         }
 
         // l2 snapshots
-        if (msg.table.match(/depth5/)) {
+        if (msg.arg.channel.match(/depth5/)) {
             this._processLevel2Snapshot(msg);
             return;
         }
 
         // l2 updates
-        if (msg.table.match(/depth/)) {
+        if (msg.arg.channel.match(/depth/)) {
             this._processLevel2Update(msg);
             return;
         }
