@@ -14,7 +14,7 @@ import { Trade } from "../Trade";
 export class ZbClient extends BasicClient {
     public remoteIdMap: Map<string, string>;
 
-    constructor({ wssPath = "wss://api.zb.work/websocket", watcherMs }: ClientOptions = {}) {
+    constructor({ wssPath = "wss://api.zb.live/websocket", watcherMs }: ClientOptions = {}) {
         super(wssPath, "ZB", undefined, watcherMs);
         this.hasTickers = true;
         this.hasTrades = true;
@@ -24,6 +24,7 @@ export class ZbClient extends BasicClient {
 
     protected _sendSubTicker(remote_id: string) {
         const wss_remote_id = remote_id.replace(/_/, "");
+        console.log("[CCXWS,ZB] ", wss_remote_id)
         this.remoteIdMap.set(wss_remote_id, remote_id);
         this._wss.send(
             JSON.stringify({
