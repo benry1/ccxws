@@ -14,7 +14,7 @@ import { Trade } from "../Trade";
 export class ZbClient extends BasicClient {
     public remoteIdMap: Map<string, string>;
 
-    constructor({ wssPath = "wss://api.zb.work/websocket", watcherMs }: ClientOptions = {}) {
+    constructor({ wssPath = "wss://live.zb.work/websocket", watcherMs }: ClientOptions = {}) {
         super(wssPath, "ZB", undefined, watcherMs);
         this.hasTickers = true;
         this.hasTrades = true;
