@@ -97,7 +97,7 @@ export class OkexClient extends BasicClient {
      */
     protected _marketArg(method: string, market: Market) {
         const type = (market.type || "spot").toLowerCase();
-        return {channel:`${method}`, instId: `${market.id}`};
+        return {channel:`${method}`, instId: `${market.id}-SWAP`};
     }
 
     /**
@@ -149,7 +149,7 @@ export class OkexClient extends BasicClient {
         this._sendMessage(
             JSON.stringify({
                 op: "unsubscribe",
-                args: [this._marketArg("ticker", market)],
+                args: [this._marketArg("tickers", market)],
             }),
         );
     }
@@ -313,7 +313,7 @@ export class OkexClient extends BasicClient {
     protected _processTicker(msg) {
         for (const datum of msg.data) {
             // ensure market
-            const remoteId = datum.instrument_id;
+            const remoteId = datum.instId.substring(0, datum.instId.length - 5);
             const market = this._tickerSubs.get(remoteId);
             if (!market) continue;
 
@@ -465,37 +465,37 @@ export class OkexClient extends BasicClient {
     protected _constructTicker(data, market) {
         const {
             last,
-            best_bid,
-            best_bid_size,
-            best_ask,
-            best_ask_size,
-            open_24h,
-            high_24h,
-            low_24h,
-            base_volume_24h,
-            volume_24h, // found in futures
-            timestamp,
+            bidPx,
+            bidSz,
+            askPx,
+            askSz,
+            open24h,
+            high24h,
+            low24h,
+            volumeCcy24h,
+            vol24h, // found in futures
+            ts,
         } = data;
 
-        const change = parseFloat(last) - parseFloat(open_24h);
-        const changePercent = change / parseFloat(open_24h);
-        const ts = moment.utc(timestamp).valueOf();
+        const change = parseFloat(last) - parseFloat(open24h);
+        const changePercent = change / parseFloat(open24h);
+        const timestamp = parseInt(ts);
         return new Ticker({
             exchange: this.name,
             base: market.base,
             quote: market.quote,
-            timestamp: ts,
+            timestamp: timestamp,
             last,
-            open: open_24h,
-            high: high_24h,
-            low: low_24h,
-            volume: base_volume_24h || volume_24h,
+            open: open24h,
+            high: high24h,
+            low: low24h,
+            volume: volumeCcy24h || vol24h,
             change: change.toFixed(8),
             changePercent: changePercent.toFixed(2),
-            bid: best_bid || "0",
-            bidVolume: best_bid_size || "0",
-            ask: best_ask || "0",
-            askVolume: best_ask_size || "0",
+            bid: bidPx || "0",
+            bidVolume: bidSz || "0",
+            ask: askPx || "0",
+            askVolume: askSz || "0",
         });
     }
 
